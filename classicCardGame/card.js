@@ -11,11 +11,11 @@ class Card {
 }
 
 class Deck {
-  constructor() {
-    this.deck = Deck.generateDeck();
+  constructor(gameMode = null) {
+    this.deck = Deck.generateDeck(gameMode);
   }
 
-  static generateDeck() {
+  static generateDeck(gameMode = null) {
     let newDeck = [];
     const suits = ["♣", "♦", "♥", "♠"];
     const values = [
@@ -33,10 +33,18 @@ class Deck {
       "Q",
       "K",
     ];
+    const blackJack = { A: 1, J: 10, Q: 10, K: 10 };
 
     for (let i = 0; i < suits.length; i++) {
       for (let j = 0; j < values.length; j++) {
-        newDeck.push(new Card(suits[i], values[j], j + 1));
+        let currentValue = values[j];
+        let intValue =
+          gameMode === "21"
+            ? currentValue in blackJack
+              ? blackJack[currentValue]
+              : parseInt(currentValue)
+            : j + 1;
+        newDeck.push(new Card(suits[i], values[j], intValue));
       }
     }
     return newDeck;
@@ -70,7 +78,7 @@ class Dealer {
     let table = {
       players: [],
       gameMode: gameMode,
-      deck: new Deck(),
+      deck: new Deck(gameMode),
     };
 
     table["deck"].shuffleDeck();
@@ -116,11 +124,35 @@ class Dealer {
     if (value > 21) value = 0;
     return value;
   }
+
+  static winnerOf21(table) {
+    let points = [];
+    let cache = [];
+    for (let i = 0; i < table["players"].length; i++) {
+      let point = Dealer.score21Individual(table["players"][i]);
+      points.push(point);
+
+      if (cache[point] >= 1) cache[point] += 1;
+      else cache[point] = 1;
+    }
+
+    console.log(points);
+
+    let maxInt = HelperFunctions.maxInArrayIndex(points);
+    if (cache[points[maxInt]] > 1) return "It is a draw ";
+    else if (cache[points[maxInt]] >= 0)
+      return "player " + (maxInt + 1) + " is the winner";
+    else return "No winners..";
+  }
+
+  // 卓のゲームの種類によって勝利条件を変更するcheckWinnerというメソッドを作成します。
+  static checkWinner(table) {
+    if (table["gameMode"] == "21") return Dealer.winnerOf21(table);
+    else return "no game";
+  }
 }
 
-// 計算のみを行うHelperFunctionsクラスを定義します。
 class HelperFunctions {
-  // 数値で構成される配列を受け取り、最大値のインデックスを返します。
   static maxInArrayIndex(intArr) {
     let maxIndex = 0;
     let maxValue = intArr[0];
@@ -135,10 +167,11 @@ class HelperFunctions {
   }
 }
 
-// 最大値は19(= index 2)
-let arr1 = [1, 9, 19, 3, 4, 6];
-console.log(HelperFunctions.maxInArrayIndex(arr1));
+let table1 = Dealer.startGame(1, "poker");
+let table2 = Dealer.startGame(3, "21");
 
-// 最大値は5(= index 0)
-let arr2 = [4, 2, 10, 10, 10, 5];
-console.log(HelperFunctions.maxInArrayIndex(arr2));
+Dealer.printTableInformation(table1);
+console.log(Dealer.checkWinner(table1));
+
+Dealer.printTableInformation(table2);
+console.log(Dealer.checkWinner(table2));
